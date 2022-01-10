@@ -1,0 +1,318 @@
+<!DOCTYPE aesl-source>
+<network>
+
+
+<!--list of global events-->
+
+
+<!--list of constants-->
+<constant value="4" name="LEFT"/>
+<constant value="3" name="RIGHT"/>
+<constant value="1" name="FORWARD"/>
+<constant value="2" name="BACKWARD"/>
+<constant value="12" name="FOLLOW_LINE"/>
+<constant value="0" name="STOPPED"/>
+<constant value="5" name="SCAN"/>
+<constant value="6" name="RED"/>
+<constant value="7" name="GREEN"/>
+<constant value="8" name="BLUE"/>
+<constant value="11" name="WHITE"/>
+<constant value="9" name="FOLLOW_WALL"/>
+<constant value="10" name="FLASH"/>
+<constant value="3500" name="THRESHOLD"/>
+<constant value="615" name="TURN_PERIOD"/>
+<constant value="30" name="ADDITIONAL_TURN"/>
+<constant value="300" name="EDGE"/>
+<constant value="300" name="TARGET"/>
+
+
+<!--show keywords state-->
+<keywords flag="true"/>
+
+
+<!--node thymio-II-->
+<node nodeId="1" name="thymio-II">var state = STOPPED
+var scanCount = 0
+var backupTime = 165
+var direction
+var color = WHITE
+var afterColour
+var tZero
+var tOne
+var turnCount
+var lineFollow
+var WALL = 0
+var GREY
+
+#FORWARD
+
+onevent button.forward
+	state = FORWARD
+	motor.left.target = 300
+	motor.right.target = 300
+	timer.period[0] = 0
+	timer.period[1] = 0
+	scanCount = 0
+	
+#BACKWARD
+
+onevent button.backward
+	state = STOPPED
+	motor.left.target = 0
+	motor.right.target = 0
+	timer.period[0] = 0
+	timer.period[1] = 0
+	call leds.top (0, 0, 0)
+
+#BACKWARD
+	
+onevent tap
+	if state == FORWARD then
+		state = BACKWARD
+		motor.left.target = -100
+		motor.right.target = -100
+		timer.period[0] = 0
+		tOne = 1
+		timer.period[1] = backupTime
+		scanCount++
+	end
+
+#TURN
+	
+sub turn
+	if state == LEFT then
+		timer.period[0] = TURN_PERIOD+ADDITIONAL_TURN
+		tZero = 1
+		timer.period[1] = 0
+		motor.left.target = -370
+		motor.right.target = 370
+		call leds.circle(0,0,0,0,0,32,32,32)
+
+	elseif state == RIGHT then
+		timer.period[0] = TURN_PERIOD
+		tZero = 1		
+		timer.period[1] = 0
+		motor.left.target = 370
+		motor.right.target = -370
+				call leds.circle(0,32,32,32,0,0,0,0)
+
+	end
+
+#SCAN
+	
+onevent timer1
+	if lineFollow == 0 then
+		if turnCount != 2 then
+			if tOne == 1 then
+				timer.period[1] = 0
+				motor.left.target = 0
+				motor.right.target = 0
+				if scanCount &lt; 3 then
+					if (prox.horizontal[1] > prox.horizontal[2] and prox.horizontal[1] > prox.horizontal[3]) then
+						state = LEFT
+						if scanCount == 2 then
+							direction = LEFT
+						end
+						if scanCount == 1 then
+							afterColour = RIGHT
+						end
+					end
+					if (prox.horizontal[3] > prox.horizontal[2] and prox.horizontal[1] &lt; prox.horizontal[3]) then
+						state = RIGHT
+						if scanCount == 2 then
+							direction = RIGHT
+						end
+						if scanCount == 1 then
+							afterColour = LEFT
+						end
+					end
+					callsub turn
+				if scanCount==2 then
+					state = afterColour				
+				end
+				else
+					if (prox.horizontal[1] > prox.horizontal[2] and prox.horizontal[1] > prox.horizontal[3]) then
+						color = RED
+					end
+					if (prox.horizontal[2] > prox.horizontal[3] and prox.horizontal[2] > prox.horizontal[3]) then
+						color = GREEN
+					end
+					if (prox.horizontal[3] > prox.horizontal[1] and prox.horizontal[3] > prox.horizontal[2]) then
+						color = BLUE
+					end
+					callsub turn2
+				end
+			end
+			if tOne == 2 then
+				callsub turn2
+			end
+		else
+			callsub flash
+		end
+	else
+		state = FOLLOW_LINE
+	end
+#FORWARD IN TURN
+	
+onevent timer0
+	if tZero == 1 then
+		state = FORWARD
+		motor.left.target = 300
+		motor.right.target = 300
+	elseif tZero == 2 then
+		tOne = 2
+		if turnCount == 1 then
+			motor.left.target = 300
+			motor.right.target = 300
+			timer.period[0] = 0
+			timer.period[1] = 3750	
+		end
+		if turnCount == 2 then
+			if afterColour == LEFT then
+				motor.left.target = 300
+				motor.right.target = 300
+			end
+			if afterColour == LEFT then
+				motor.left.target = 300
+				motor.right.target = 300
+			end
+			timer.period[0] = 0
+			timer.period[1] = 3500
+		end
+	elseif tZero == 3 then
+		if afterColour == LEFT then
+			motor.left.target= 300
+			motor.right.target= 500
+		end
+		if afterColour == RIGHT then
+			motor.left.target= 500
+			motor.right.target= 300
+		end
+		call leds.top (0, 0, 0)
+		timer.period[0] = 0
+		timer.period[1] = 500
+		tZero = 4
+		lineFollow = 1
+		state = FOLLOW_LINE
+	elseif tZero == 4 then
+		motor.left.target = 200
+		motor.right.target = 200
+	elseif tZero == 5 then
+		motor.left.target=0
+		motor.right.target=0
+		callsub light_up
+	elseif tZero == 6 then
+		motor.left.target=250
+		motor.right.target=400
+	end
+#LIGHT UP COLOUR
+
+sub light_up
+	motor.left.target =0
+	motor.right.target = 0
+if color == RED then
+call leds.top (32, 0, 0)
+elseif color == GREEN then
+call leds.top (0, 32, 0)
+elseif color == BLUE then
+call leds.top (0, 0, 32)
+else
+call leds.top (0, 0, 0)
+end
+
+#TURN AFTER COLOUR
+
+sub turn2
+	if turnCount == 0 then
+		tZero = 2
+		if afterColour == LEFT then
+			timer.period[0] = TURN_PERIOD+ADDITIONAL_TURN+20
+			timer.period[1] = 0
+			motor.left.target = -370
+			motor.right.target = 370			
+		end
+		if afterColour == RIGHT then
+			timer.period[0] = TURN_PERIOD+20
+			timer.period[1] = 0
+			motor.left.target = 370
+			motor.right.target = -370			
+		end
+	elseif turnCount == 1 then
+		if afterColour == LEFT then
+			timer.period[0] = TURN_PERIOD+20
+			timer.period[1] = 0
+			motor.left.target = 380
+			motor.right.target = -380			
+		end
+		if afterColour == RIGHT then
+			timer.period[0] = TURN_PERIOD+ADDITIONAL_TURN+20
+			timer.period[1] = 0
+			motor.left.target = -380
+			motor.right.target = 380			
+		end
+	end
+	turnCount++
+
+#FLASH
+			
+sub flash
+	tZero = 3
+motor.left.target = 0
+motor.right.target = 0
+timer.period[0] = 1000
+timer.period[1] = 0
+call leds.top (32, 0, 0)
+call sound.freq(440,300)
+#FOLLOW LINE
+
+onevent prox
+	if state == FOLLOW_LINE and WALL == 0 then
+		if GREY != 1 then
+			if afterColour == LEFT then
+				if prox.ground.delta[0] > EDGE then
+					motor.left.target = 300
+					motor.right.target = -50
+				end		
+				if prox.ground.delta[0] &lt; EDGE then
+					motor.left.target = -50
+					motor.right.target = 300
+				end
+				if prox.ground.delta[0] &lt; EDGE and prox.ground.delta[0] &lt; EDGE then
+					motor.left.target = -50
+					motor.right.target = 300
+				end
+			end
+			if afterColour == RIGHT then
+				if prox.ground.delta[1] > EDGE then
+					motor.left.target = -50
+					motor.right.target = 300
+				end
+				if prox.ground.delta[1] &lt; EDGE then
+					motor.left.target = 300
+					motor.right.target = -50
+				end
+				if prox.ground.delta[0] &lt; EDGE and prox.ground.delta[0] &lt; EDGE then
+					motor.left.target = 300
+					motor.right.target = -50
+				end
+			end
+		end
+		if prox.horizontal[4] > 4000 then
+			motor.left.target=-motor.left.speed
+			motor.right.target=-motor.right.speed
+			WALL = 1
+			tZero = 6
+			timer.period[0] = 165
+		end
+	end
+	
+	if prox.ground.delta[0] > 400 and prox.ground.delta[0] &lt; 650 and WALL == 1 then
+		tZero = 5
+		GREY = 1
+		timer.period[0] = 1000
+	end
+
+</node>
+
+
+</network>
