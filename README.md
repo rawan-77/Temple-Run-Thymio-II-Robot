@@ -3,7 +3,7 @@ A program (using ASEBA) that allows Thymio II robot to navigate a temple maze an
 
 ## Detailed Description
 
-### The Course - Source: CSCI 1108 - Professor Mitchel Kane - Brightspace - Dalhousie University
+### The Course - Source: CSCI 1108 - Professor Mitchell Kane - Brightspace - Dalhousie University
 The blue arrows indicate removable blocks and the red ovals indicate barcodes. Before testing the program, some of the removable blocks are removed to provide a path for the robot to follow. The barcodes resemble instructions. The program allows the robot to scan these barcodes to know which path is open. One of the barcodes indicates a color and as soon as the robot scans it, it lights up. At the hazard lines, the robot stops and beeps for 5 seconds then continues moving to find the treasure room. It follows one of the black lines based on the barcodes' instructions (which path is open). The purple circle is inside the treasure room, where the robot should stop.  
 
 ![The Course](https://user-images.githubusercontent.com/97373344/148852635-9af730f8-fa5e-4f5f-b8c4-091fe7072682.png)
